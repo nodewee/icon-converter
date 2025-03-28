@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/disintegration/imaging"
@@ -19,7 +20,7 @@ var (
 	// Browser extension icon sizes
 	browserExtSizes = []int{16, 32, 48, 128}
 
-	// macOS app icon sizes
+	// macOS app icon sizes (all sizes needed for iconset)
 	macAppSizes = []int{16, 32, 64, 128, 256, 512, 1024}
 
 	// Windows app icon sizes
@@ -181,57 +182,89 @@ func processForBrowserExtension(inputPath, outputDir string) error {
 // processForMacApp processes an image for macOS application requirements
 func processForMacApp(inputPath, outputDir string) error {
 	macDir := filepath.Join(outputDir, "mac-app")
+	contentsDir := filepath.Join(macDir, "Contents")
+	resourcesDir := filepath.Join(contentsDir, "Resources")
+
+	// Create standard macOS app bundle structure
+	if err := os.MkdirAll(resourcesDir, 0755); err != nil {
+		return fmt.Errorf("failed to create Mac app resources directory: %v", err)
+	}
+
+	// Create temporary iconset directory for iconutil
 	iconsetDir := filepath.Join(macDir, "AppIcon.iconset")
 	if err := os.MkdirAll(iconsetDir, 0755); err != nil {
-		return fmt.Errorf("failed to create Mac app directory: %v", err)
+		return fmt.Errorf("failed to create Mac app iconset directory: %v", err)
+	}
+
+	// Define macOS icon naming convention according to Apple Human Interface Guidelines
+	iconConventions := []struct {
+		size     int
+		filename string
+		scale    int // 1 for standard, 2 for @2x
+	}{
+		{16, "icon_16x16.png", 1},
+		{32, "icon_16x16@2x.png", 2},
+		{32, "icon_32x32.png", 1},
+		{64, "icon_32x32@2x.png", 2},
+		{128, "icon_128x128.png", 1},
+		{256, "icon_128x128@2x.png", 2},
+		{256, "icon_256x256.png", 1},
+		{512, "icon_256x256@2x.png", 2},
+		{512, "icon_512x512.png", 1},
+		{1024, "icon_512x512@2x.png", 2},
 	}
 
 	// Generate iconset files
-	for _, size := range macAppSizes {
-		// Standard resolution
-		stdName := fmt.Sprintf("icon_%dx%d.png", size, size)
-
-		// Check for renamed file existence before saving
-		var osxName string
-		switch size {
-		case 16:
-			osxName = "icon_16x16.png"
-		case 32:
-			osxName = "icon_32x32.png"
-		case 64:
-			osxName = "icon_32x32@2x.png"
-		case 128:
-			osxName = "icon_128x128.png"
-		case 256:
-			osxName = "icon_256x256.png"
-		case 512:
-			osxName = "icon_512x512.png"
-		case 1024:
-			osxName = "icon_512x512@2x.png"
+	for _, convention := range iconConventions {
+		// Load the image
+		src, err := imaging.Open(inputPath)
+		if err != nil {
+			return fmt.Errorf("failed to open image: %v", err)
 		}
 
-		if osxName != "" {
-			finalPath := filepath.Join(iconsetDir, osxName)
-			if _, err := os.Stat(finalPath); err == nil && !forceFlag {
-				return fmt.Errorf("output file already exists: %s. Use -f or --force flag to overwrite", finalPath)
-			}
+		// Resize the image
+		resized := imaging.Resize(src, convention.size, convention.size, imaging.Lanczos)
+
+		// Create output path
+		outPath := filepath.Join(iconsetDir, convention.filename)
+
+		// Check if file exists and force flag is not set
+		if _, err := os.Stat(outPath); err == nil && !forceFlag {
+			return fmt.Errorf("output file already exists: %s. Use -f or --force flag to overwrite", outPath)
 		}
 
-		if err := resizeAndSave(inputPath, iconsetDir, size, imaging.PNG); err != nil {
-			return err
+		// Save the resized image
+		err = imaging.Save(resized, outPath)
+		if err != nil {
+			return fmt.Errorf("failed to save resized image: %v", err)
 		}
+	}
 
-		// Rename to macOS iconset naming convention
-		if osxName != "" {
-			os.Rename(
-				filepath.Join(iconsetDir, stdName),
-				filepath.Join(iconsetDir, osxName),
-			)
+	// Define paths for .icns files
+	tmpIcnsPath := filepath.Join(macDir, "AppIcon.icns")
+	finalIcnsPath := filepath.Join(resourcesDir, "AppIcon.icns")
+
+	// Try to automatically convert .iconset to .icns using iconutil
+	fmt.Println("Attempting to convert .iconset to .icns using iconutil...")
+
+	cmd := exec.Command("iconutil", "-c", "icns", "-o", tmpIcnsPath, iconsetDir)
+	if err := cmd.Run(); err != nil {
+		fmt.Println("Automatic conversion failed. You will need to convert manually.")
+		fmt.Printf("To create .icns file, run: cd \"%s\" && iconutil -c icns AppIcon.iconset\n", macDir)
+		fmt.Printf("Then place the resulting .icns file at: %s\n", finalIcnsPath)
+	} else {
+		// If iconutil succeeded, move the .icns file to the Resources directory
+		if err := os.Rename(tmpIcnsPath, finalIcnsPath); err != nil {
+			fmt.Printf("Created .icns file but failed to move it to Resources directory: %v\n", err)
+			fmt.Printf("Please manually move %s to %s\n", tmpIcnsPath, finalIcnsPath)
+		} else {
+			fmt.Printf("Successfully created and placed .icns file at: %s\n", finalIcnsPath)
 		}
 	}
 
 	fmt.Printf("macOS app icons generated in: %s\n", iconsetDir)
-	fmt.Println("To create .icns file, run: iconutil -c icns AppIcon.iconset")
+	fmt.Println("Complete macOS app directory structure created at:", macDir)
+
 	return nil
 }
 

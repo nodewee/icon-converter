@@ -42,6 +42,32 @@ icon [input image] [output directory] [flags]
 - `--windows-app`, `-w`: Generate icons for Windows applications (16x16 to 256x256)
 - `--force`, `-f`: Force overwrite existing files (without this flag, the tool will exit with error if output files already exist)
 
+### macOS App Icon Details
+
+When using the `--mac-app` flag, the tool generates a standard macOS app icon structure following Apple's [Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/app-icons). The output includes:
+
+- Complete macOS app bundle structure (`Contents/Resources/`)
+- An `AppIcon.iconset` directory with all required icon sizes:
+  - icon_16x16.png
+  - icon_16x16@2x.png
+  - icon_32x32.png
+  - icon_32x32@2x.png
+  - icon_128x128.png
+  - icon_128x128@2x.png
+  - icon_256x256.png
+  - icon_256x256@2x.png
+  - icon_512x512.png
+  - icon_512x512@2x.png
+
+The tool will automatically attempt to convert the iconset to a .icns file using the macOS `iconutil` command and place it in the proper location (`Contents/Resources/AppIcon.icns`). If automatic conversion fails, you will be prompted to perform the conversion manually:
+
+```
+cd [output directory]/mac-app
+iconutil -c icns AppIcon.iconset
+```
+
+Then move the generated `.icns` file to the `Contents/Resources/` directory.
+
 ### Behavior
 
 - At least one output type flag (`-b`, `-m`, or `-w`) must be specified, otherwise the tool will display a warning and exit without any action.
