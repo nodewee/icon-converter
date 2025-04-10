@@ -13,6 +13,7 @@ var (
 	browserExtFlag bool // Generate browser extension icons
 	macAppFlag     bool // Generate macOS application icons
 	windowsAppFlag bool // Generate Windows application icons
+	faviconFlag    bool // Generate favicon files
 	forceFlag      bool // Force overwrite existing files
 )
 
@@ -21,7 +22,7 @@ var rootCmd = &cobra.Command{
 	Use:   "icon [input image] [output directory]",
 	Short: "Convert icons to various formats and sizes",
 	Long: `Icon Converter is a command line tool to convert icons to various formats and sizes
-for different platforms like browser extensions, macOS applications, and Windows applications.`,
+for different platforms like browser extensions, macOS applications, Windows applications, and favicons.`,
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		inputPath := args[0]
@@ -33,9 +34,9 @@ for different platforms like browser extensions, macOS applications, and Windows
 		}
 
 		// Check if any output type is specified
-		if !browserExtFlag && !macAppFlag && !windowsAppFlag {
+		if !browserExtFlag && !macAppFlag && !windowsAppFlag && !faviconFlag {
 			fmt.Println("Warning: No output type specified, no action performed")
-			fmt.Println("Tip: Use -b, -m, -w to specify output type, or use --help to view help")
+			fmt.Println("Tip: Use -b, -m, -w, or --favicon to specify output type, or use --help to view help")
 			return nil
 		}
 
@@ -73,6 +74,12 @@ for different platforms like browser extensions, macOS applications, and Windows
 			}
 		}
 
+		if faviconFlag {
+			if err := converter.ProcessForFavicon(); err != nil {
+				return err
+			}
+		}
+
 		return nil
 	},
 }
@@ -89,5 +96,11 @@ func init() {
 	rootCmd.Flags().BoolVarP(&browserExtFlag, "browser-extension", "b", false, "Convert for browser extension requirements")
 	rootCmd.Flags().BoolVarP(&macAppFlag, "mac-app", "m", false, "Convert for macOS application requirements")
 	rootCmd.Flags().BoolVarP(&windowsAppFlag, "windows-app", "w", false, "Convert for Windows application requirements")
+
+	// Add the favicon flag and create a hidden alias
+	rootCmd.Flags().BoolVarP(&faviconFlag, "favicon", "", false, "Convert for website favicon requirements")
+	rootCmd.Flags().BoolVar(&faviconFlag, "fav", false, "Convert for website favicon requirements")
+	rootCmd.Flags().MarkHidden("fav") // Make the alias hidden from help
+
 	rootCmd.Flags().BoolVarP(&forceFlag, "force", "f", false, "Force overwrite existing files")
 }

@@ -20,6 +20,15 @@ var (
 
 	// WindowsAppSizes contains standard icon sizes for Windows applications
 	WindowsAppSizes = []int{16, 32, 48, 64, 128, 256}
+
+	// FaviconPNFSizes contains common PNG sizes for favicons. These will also be used for the .ico file.
+	FaviconPNFSizes = []int{16, 32, 48, 64}
+
+	// FaviconOtherPNFSizes contains additional PNG sizes to generate for modern browsers.
+	FaviconOtherPNFSizes = []int{192, 512}
+
+	// AppleTouchIconSize is the standard size for apple-touch-icon.png
+	AppleTouchIconSize = 180
 )
 
 // Config contains configuration options for icon conversion
@@ -47,22 +56,19 @@ func NewConverter(config Config) *Converter {
 	}
 }
 
-// ResizeAndSave resizes an image and saves it to the output directory with the specified format
-func (c *Converter) ResizeAndSave(outputDir string, size int, format imaging.Format) error {
+// resizeAndSaveInternal resizes an image and saves it to the output directory with a specific filename and format
+func (c *Converter) resizeAndSaveInternal(outputDir string, size int, format imaging.Format, filename string) (string, error) {
 	// Load the source image
 	src, err := imaging.Open(c.Config.InputPath)
 	if err != nil {
-		return fmt.Errorf("failed to open image %s: %w", c.Config.InputPath, err)
+		return "", fmt.Errorf("failed to open image %s: %w", c.Config.InputPath, err)
 	}
 
 	// Resize the image using Lanczos resampling
 	resized := imaging.Resize(src, size, size, imaging.Lanczos)
 
-	// Create output filename based on size
-	outName := fmt.Sprintf("icon_%dx%d", size, size)
-	var extension string
-
 	// Determine file extension based on format
+	var extension string
 	switch format {
 	case imaging.PNG:
 		extension = ".png"
@@ -78,19 +84,28 @@ func (c *Converter) ResizeAndSave(outputDir string, size int, format imaging.For
 		extension = ".png"
 	}
 
-	outPath := filepath.Join(outputDir, outName+extension)
+	outPath := filepath.Join(outputDir, filename+extension)
 
 	// Check if file exists and force flag is not set
 	if _, err := os.Stat(outPath); err == nil && !c.Config.ForceFlag {
-		return fmt.Errorf("output file already exists: %s. Use -f or --force flag to overwrite", outPath)
+		return "", fmt.Errorf("output file already exists: %s. Use -f or --force flag to overwrite", outPath)
 	}
 
 	// Save the resized image
 	if err = imaging.Save(resized, outPath); err != nil {
-		return fmt.Errorf("failed to save resized image to %s: %w", outPath, err)
+		return "", fmt.Errorf("failed to save resized image to %s: %w", outPath, err)
 	}
 
-	return nil
+	return outPath, nil
+}
+
+// ResizeAndSave resizes an image and saves it to the output directory with the specified format
+// The filename will be in the format icon_WxH.ext
+func (c *Converter) ResizeAndSave(outputDir string, size int, format imaging.Format) error {
+	// Create output filename based on size
+	outName := fmt.Sprintf("icon_%dx%d", size, size)
+	_, err := c.resizeAndSaveInternal(outputDir, size, format, outName)
+	return err
 }
 
 // CopyFile copies a file from src to dst, respecting the force flag
@@ -175,25 +190,9 @@ func (c *Converter) ProcessForMacApp() error {
 
 	// Generate iconset files
 	for _, convention := range iconConventions {
-		// Load the image
-		src, err := imaging.Open(c.Config.InputPath)
+		// Use resizeAndSaveInternal to get the path, though we don't need it here
+		_, err := c.resizeAndSaveInternal(iconsetDir, convention.size, imaging.PNG, convention.filename)
 		if err != nil {
-			return fmt.Errorf("failed to open image for macOS icon %s: %w", convention.filename, err)
-		}
-
-		// Resize the image
-		resized := imaging.Resize(src, convention.size, convention.size, imaging.Lanczos)
-
-		// Create output path
-		outPath := filepath.Join(iconsetDir, convention.filename)
-
-		// Check if file exists and force flag is not set
-		if _, err := os.Stat(outPath); err == nil && !c.Config.ForceFlag {
-			return fmt.Errorf("output file already exists: %s. Use -f or --force flag to overwrite", outPath)
-		}
-
-		// Save the resized image
-		if err = imaging.Save(resized, outPath); err != nil {
 			return fmt.Errorf("failed to save macOS icon %s: %w", convention.filename, err)
 		}
 	}
@@ -207,8 +206,8 @@ func (c *Converter) ProcessForMacApp() error {
 
 	cmd := exec.Command("iconutil", "-c", "icns", "-o", tmpIcnsPath, iconsetDir)
 	if err := cmd.Run(); err != nil {
-		fmt.Println("Automatic conversion failed. You will need to convert manually.")
-		fmt.Printf("To create .icns file, run: cd \"%s\" && iconutil -c icns AppIcon.iconset\n", macDir)
+		fmt.Println("Automatic conversion failed. Check if iconutil is installed and in your PATH.")
+		fmt.Printf("To create .icns file manually, run: cd \"%s\" && iconutil -c icns AppIcon.iconset\n", macDir)
 		fmt.Printf("Then place the resulting .icns file at: %s\n", finalIcnsPath)
 		return nil // We don't return error here to allow users to convert manually
 	}
@@ -243,5 +242,64 @@ func (c *Converter) ProcessForWindowsApp() error {
 
 	fmt.Printf("Windows app icons generated in: %s\n", winDir)
 	fmt.Println("To create .ico file, use a third-party tool with these images")
+	return nil
+}
+
+// ProcessForFavicon generates standard favicon files, including a multi-resolution .ico file if magick is available
+func (c *Converter) ProcessForFavicon() error {
+	faviconDir := filepath.Join(c.Config.OutputDir, "favicon")
+	if err := os.MkdirAll(faviconDir, 0755); err != nil {
+		return fmt.Errorf("failed to create favicon directory: %w", err)
+	}
+
+	var icoInputFiles []string
+
+	// Process standard PNG sizes for .ico
+	for _, size := range FaviconPNFSizes {
+		filename := fmt.Sprintf("favicon-%dx%d", size, size)
+		outPath, err := c.resizeAndSaveInternal(faviconDir, size, imaging.PNG, filename)
+		if err != nil {
+			return fmt.Errorf("failed to process favicon PNG size %dx%d: %w", size, size, err)
+		}
+		icoInputFiles = append(icoInputFiles, outPath)
+	}
+
+	// Process other PNG sizes
+	for _, size := range FaviconOtherPNFSizes {
+		filename := fmt.Sprintf("favicon-%dx%d", size, size)
+		if _, err := c.resizeAndSaveInternal(faviconDir, size, imaging.PNG, filename); err != nil {
+			return fmt.Errorf("failed to process favicon PNG size %dx%d: %w", size, size, err)
+		}
+	}
+
+	// Process apple-touch-icon
+	appleTouchFilename := "apple-touch-icon"
+	if _, err := c.resizeAndSaveInternal(faviconDir, AppleTouchIconSize, imaging.PNG, appleTouchFilename); err != nil {
+		return fmt.Errorf("failed to process apple-touch-icon: %w", err)
+	}
+
+	fmt.Printf("Favicon PNG files generated in: %s\n", faviconDir)
+
+	// Attempt to generate .ico using magick command
+	icoOutputPath := filepath.Join(faviconDir, "favicon.ico")
+	fmt.Println("Attempting to generate favicon.ico using ImageMagick (magick command)...")
+
+	// Check if file exists and force flag is not set
+	if _, err := os.Stat(icoOutputPath); err == nil && !c.Config.ForceFlag {
+		fmt.Printf("Skipping favicon.ico generation: %s already exists. Use -f to overwrite.\n", icoOutputPath)
+		return nil
+	}
+
+	magickCmd := exec.Command("magick", append([]string{"convert"}, append(icoInputFiles, icoOutputPath)...)...)
+	output, err := magickCmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("Failed to generate favicon.ico using magick command: %v\n", err)
+		fmt.Printf("ImageMagick output:\n%s\n", string(output))
+		fmt.Println("Please ensure ImageMagick is installed and the 'magick' command is in your PATH.")
+		fmt.Println("You may need to generate the favicon.ico manually from the generated PNGs.")
+	} else {
+		fmt.Printf("Successfully generated favicon.ico at: %s\n", icoOutputPath)
+	}
+
 	return nil
 }
