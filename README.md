@@ -68,6 +68,26 @@ The project follows a clean architecture approach with separation of concerns:
 - For macOS `.icns` file generation: `iconutil` command-line tool (included with macOS)
 - For `.ico` file generation (using `--favicon` or `--fav`): ImageMagick (`magick` command in PATH)
 
+## Automated Builds
+
+This project uses GitHub Actions to automatically build binaries for multiple platforms:
+
+- When pushing to the `main` or `master` branch, workflow builds binaries for:
+  - Linux (amd64, arm64)
+  - macOS (amd64, arm64)
+  - Windows (amd64)
+
+- When creating a tag with format `v*` (e.g., `v1.0.0`), the workflow:
+  1. Builds all platform binaries
+  2. Creates a GitHub Release
+  3. Attaches all binaries to the release
+
+To create a new release:
+```bash
+git tag v1.0.0  # Replace with your version
+git push origin v1.0.0
+```
+
 ## License
 
 MIT 
