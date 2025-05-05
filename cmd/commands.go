@@ -2,8 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"icon-converter/pkg/icon"
 	"os"
+
+	"github.com/nodewee/icon-converter/pkg/icon"
 
 	"github.com/spf13/cobra"
 )

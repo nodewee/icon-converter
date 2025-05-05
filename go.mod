@@ -1,4 +1,4 @@
-module icon-converter
+module github.com/nodewee/icon-converter
 
 go 1.24.1
 

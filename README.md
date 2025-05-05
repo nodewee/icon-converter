@@ -17,7 +17,7 @@ A command-line tool to convert icons to various formats and sizes for different 
 Make sure you have Go installed (version 1.18 or later), then run:
 
 ```bash
-git clone https://github.com/yourusername/icon-converter.git
+git clone https://github.com/nodewee/icon-converter.git
 cd icon-converter
 go build
 ```
@@ -86,6 +86,55 @@ To create a new release:
 ```bash
 git tag v1.0.0  # Replace with your version
 git push origin v1.0.0
+```
+
+## Example Results
+
+Here's what you can expect after running the converter on an input image:
+
+### Browser Extension Icons
+```
+output/
+├── icon-16.png  (16x16)
+├── icon-32.png  (32x32)
+├── icon-48.png  (48x48)
+└── icon-128.png (128x128)
+```
+
+### macOS Application Icons
+```
+output/
+└── AppIcon.iconset/
+    ├── icon_16x16.png
+    ├── icon_16x16@2x.png
+    ├── icon_32x32.png
+    ├── icon_32x32@2x.png
+    ├── icon_128x128.png
+    ├── icon_128x128@2x.png
+    ├── icon_256x256.png
+    ├── icon_256x256@2x.png
+    ├── icon_512x512.png
+    └── icon_512x512@2x.png
+└── AppIcon.icns (if iconutil is available)
+```
+
+### Windows Application Icons
+```
+output/
+├── icon-16.ico
+├── icon-32.ico
+├── icon-48.ico
+└── icon-256.ico
+```
+
+### Website Favicons
+```
+output/
+├── favicon-16x16.png
+├── favicon-32x32.png
+├── favicon-48x48.png
+├── favicon.ico (multi-resolution if ImageMagick is available)
+└── apple-touch-icon.png (180x180)
 ```
 
 ## License

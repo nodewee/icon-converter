@@ -2,8 +2,9 @@
 package main
 
 import (
-	"icon-converter/cmd"
 	"os"
+
+	"github.com/nodewee/icon-converter/cmd"
 )
 
 // main is the entry point of the application.
