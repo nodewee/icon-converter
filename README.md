@@ -1,6 +1,6 @@
 # Icon Converter
 
-A command-line tool to convert icons to various formats and sizes for different platforms like browser extensions, macOS applications, Windows applications, and websites (favicons).
+A command-line tool to convert **any image** into various icon formats and sizes for different platforms, such as browser extensions, macOS applications, Windows applications, and websites (favicons).
 
 ## Features
 
