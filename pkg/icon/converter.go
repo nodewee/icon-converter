@@ -39,8 +39,8 @@ type Config struct {
 	// OutputDir is the directory where output files will be saved
 	OutputDir string
 
-	// ForceFlag indicates whether to overwrite existing files
-	ForceFlag bool
+	// OverwriteFlag indicates whether to overwrite existing files
+	OverwriteFlag bool
 }
 
 // Converter handles image resizing and format conversion for various platforms
@@ -86,9 +86,9 @@ func (c *Converter) resizeAndSaveInternal(outputDir string, size int, format ima
 
 	outPath := filepath.Join(outputDir, filename+extension)
 
-	// Check if file exists and force flag is not set
-	if _, err := os.Stat(outPath); err == nil && !c.Config.ForceFlag {
-		return "", fmt.Errorf("output file already exists: %s. Use -f or --force flag to overwrite", outPath)
+	// Check if file exists and overwrite flag is not set
+	if _, err := os.Stat(outPath); err == nil && !c.Config.OverwriteFlag {
+		return "", fmt.Errorf("output file already exists: %s. Use --overwrite flag to overwrite", outPath)
 	}
 
 	// Save the resized image
@@ -108,11 +108,11 @@ func (c *Converter) ResizeAndSave(outputDir string, size int, format imaging.For
 	return err
 }
 
-// CopyFile copies a file from src to dst, respecting the force flag
+// CopyFile copies a file from src to dst, respecting the overwrite flag
 func (c *Converter) CopyFile(src, dst string) error {
-	// Check if destination file exists and force flag is not set
-	if _, err := os.Stat(dst); err == nil && !c.Config.ForceFlag {
-		return fmt.Errorf("output file already exists: %s. Use -f or --force flag to overwrite", dst)
+	// Check if destination file exists and overwrite flag is not set
+	if _, err := os.Stat(dst); err == nil && !c.Config.OverwriteFlag {
+		return fmt.Errorf("output file already exists: %s. Use --overwrite flag to overwrite", dst)
 	}
 
 	sourceFile, err := os.Open(src)
@@ -284,9 +284,9 @@ func (c *Converter) ProcessForFavicon() error {
 	icoOutputPath := filepath.Join(faviconDir, "favicon.ico")
 	fmt.Println("Attempting to generate favicon.ico using ImageMagick (magick command)...")
 
-	// Check if file exists and force flag is not set
-	if _, err := os.Stat(icoOutputPath); err == nil && !c.Config.ForceFlag {
-		fmt.Printf("Skipping favicon.ico generation: %s already exists. Use -f to overwrite.\n", icoOutputPath)
+	// Check if file exists and overwrite flag is not set
+	if _, err := os.Stat(icoOutputPath); err == nil && !c.Config.OverwriteFlag {
+		fmt.Printf("Skipping favicon.ico generation: %s already exists. Use --overwrite to overwrite.\n", icoOutputPath)
 		return nil
 	}
 

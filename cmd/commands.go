@@ -15,7 +15,7 @@ var (
 	macAppFlag     bool // Generate macOS application icons
 	windowsAppFlag bool // Generate Windows application icons
 	faviconFlag    bool // Generate favicon files
-	forceFlag      bool // Force overwrite existing files
+	overwriteFlag  bool // Force overwrite existing files
 )
 
 // rootCmd represents the base command for the icon converter application
@@ -37,7 +37,7 @@ for different platforms like browser extensions, macOS applications, Windows app
 		// Check if any output type is specified
 		if !browserExtFlag && !macAppFlag && !windowsAppFlag && !faviconFlag {
 			fmt.Println("Warning: No output type specified, no action performed")
-			fmt.Println("Tip: Use -b, -m, -w, or --favicon to specify output type, or use --help to view help")
+			fmt.Println("Tip: Use -b, -m, -w, or -f to specify output type, or use --help to view help")
 			return nil
 		}
 
@@ -48,9 +48,9 @@ for different platforms like browser extensions, macOS applications, Windows app
 
 		// Create converter configuration
 		config := icon.Config{
-			InputPath: inputPath,
-			OutputDir: outputDir,
-			ForceFlag: forceFlag,
+			InputPath:     inputPath,
+			OutputDir:     outputDir,
+			OverwriteFlag: overwriteFlag,
 		}
 
 		// Create converter instance
@@ -97,11 +97,6 @@ func init() {
 	rootCmd.Flags().BoolVarP(&browserExtFlag, "browser-extension", "b", false, "Convert for browser extension requirements")
 	rootCmd.Flags().BoolVarP(&macAppFlag, "mac-app", "m", false, "Convert for macOS application requirements")
 	rootCmd.Flags().BoolVarP(&windowsAppFlag, "windows-app", "w", false, "Convert for Windows application requirements")
-
-	// Add the favicon flag and create a hidden alias
-	rootCmd.Flags().BoolVarP(&faviconFlag, "favicon", "", false, "Convert for website favicon requirements")
-	rootCmd.Flags().BoolVar(&faviconFlag, "fav", false, "Convert for website favicon requirements")
-	rootCmd.Flags().MarkHidden("fav") // Make the alias hidden from help
-
-	rootCmd.Flags().BoolVarP(&forceFlag, "force", "f", false, "Force overwrite existing files")
+	rootCmd.Flags().BoolVarP(&faviconFlag, "favicon", "f", false, "Convert for website favicon requirements")
+	rootCmd.Flags().BoolVar(&overwriteFlag, "overwrite", false, "Overwrite existing files")
 }

@@ -10,7 +10,7 @@ A command-line tool to convert **any image** into various icon formats and sizes
 - Convert icons for Windows applications in various sizes
 - Generate standard favicon PNG files (favicon-16x16.png, favicon-32x32.png, etc.) and apple-touch-icon.png
 - Generate a multi-resolution `favicon.ico` file (requires ImageMagick `magick` command)
-- Force overwrite of existing files with `-f` flag
+- Overwrite existing files with `--overwrite` flag
 
 ## Installation
 
@@ -35,16 +35,15 @@ Ensure the `magick` command is available in your system's PATH.
 -b, --browser-extension   Convert for browser extension requirements
 -m, --mac-app             Convert for macOS application requirements
 -w, --windows-app         Convert for Windows application requirements
-   --favicon              Convert for website favicon requirements
-   --fav                  Alias for --favicon
--f, --force               Force overwrite existing files
+-f, --favicon             Convert for website favicon requirements
+    --overwrite           Overwrite existing files
 -h, --help                Help for the command
 
 # Examples
-./icon-converter icon.png ./output -b -m -w --favicon  # Convert for all platforms
-./icon-converter icon.png ./output -b                # Convert for browser extensions only
-./icon-converter icon.png ./output -m -f             # Convert for macOS and force overwrite
-./icon-converter icon.png ./output --fav             # Convert for website favicons only (using alias)
+./icon-converter icon.png ./output -b -m -w -f                # Convert for all platforms
+./icon-converter icon.png ./output -b                         # Convert for browser extensions only
+./icon-converter icon.png ./output -m --overwrite             # Convert for macOS and overwrite existing files
+./icon-converter icon.png ./output -f                         # Convert for website favicons only
 ```
 
 ## Code Architecture
@@ -66,7 +65,7 @@ The project follows a clean architecture approach with separation of concerns:
 
 - Go (version 1.18 or later)
 - For macOS `.icns` file generation: `iconutil` command-line tool (included with macOS)
-- For `.ico` file generation (using `--favicon` or `--fav`): ImageMagick (`magick` command in PATH)
+- For `.ico` file generation (using `--favicon`): ImageMagick (`magick` command in PATH)
 
 ## Automated Builds
 
